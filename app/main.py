@@ -230,7 +230,7 @@ users_db = {}
 
 # Plan quotas (requests per month)
 PLAN_QUOTAS = {
-    "free": {"requests": 100, "words": 50000},
+    "free": {"requests": 5, "words": 1000},
     "starter": {"requests": 500, "words": 200000},
     "agency": {"requests": 2000, "words": 1000000},
     "enterprise": {"requests": 999999999, "words": 999999999},
@@ -243,30 +243,6 @@ PLAN_PRICES = {
     "agency": 199,
     "enterprise": 499,
 }
-
-
-def get_current_user(authorization: Optional[str] = Header(None)) -> dict:
-    """
-    Extract user from API key.
-    In production: verify Clerk JWT or your own API key system.
-    MVP: accept any key and mock a user.
-    """
-    if not authorization:
-        raise HTTPException(status_code=401, detail="Missing API key")
-
-    # MVP: use the key as user ID
-    user_id = authorization.replace("Bearer ", "")
-
-    if user_id not in users_db:
-        # Create user on first use
-        users_db[user_id] = {
-            "id": user_id,
-            "plan": "free",
-            "requests_this_month": 0,
-            "words_this_month": 0,
-        }
-
-    return users_db[user_id]
 
 
 @app.get("/", response_class=HTMLResponse)

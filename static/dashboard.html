@@ -173,7 +173,7 @@
         let selectedPlan = 'agency';
         
         const PLAN_QUOTAS = {
-            free: { requests: 100, words: 50000 },
+            free: { requests: 5, words: 1000 },
             starter: { requests: 500, words: 200000 },
             agency: { requests: 2000, words: 1000000 },
             enterprise: { requests: -1, words: -1 }
@@ -328,7 +328,9 @@
                 
             } catch (err) {
                 resultEl.className = 'test-result show error';
-                resultEl.textContent = 'Error: ' + err.message;
+                let msg = err.message;
+                if (msg === '[object Object]') msg = 'Server error. Check API keys.';
+                resultEl.textContent = 'Error: ' + msg;
             }
         }
 
