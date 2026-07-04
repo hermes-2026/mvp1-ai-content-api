@@ -59,15 +59,18 @@ async def generate_content(request: GenerateRequest) -> tuple[str, int]:
     system_prompt = SYSTEM_PROMPTS.get(request.content_type, SYSTEM_PROMPTS[ContentType.BLOG_POST])
     user_prompt = build_user_prompt(request)
     
-    response = client.chat.completions.create(
-        model="gpt-4o-mini",  # Cheap and fast
-        messages=[
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": user_prompt}
-        ],
-        max_tokens=4000,
-        temperature=0.7
-    )
+    try:
+        response = client.chat.completions.create(
+            model="gpt-4o-mini",  # Cheap and fast
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_prompt}
+            ],
+            max_tokens=4000,
+            temperature=0.7
+        )
+    except Exception as e:
+        raise Exception(f"OpenAI error: {str(e)}")
     
     content = response.choices[0].message.content
     tokens_used = response.usage.total_tokens
