@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - ContentGen API</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        :root { --primary: #6366f1; --primary-dark: #4f46e5; --primary-light: #818cf8; --text: #1e293b; --text-muted: #64748b; --bg: #ffffff; --bg-alt: #f8fafc; --border: #e2e8f0; --success: #10b981; --error: #ef4444; }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Inter', sans-serif; color: var(--text); background: var(--bg-alt); min-height: 100vh; }
+        header { background: white; border-bottom: 1px solid var(--border); padding: 16px 24px; position: sticky; top: 0; z-index: 100; }
+        header .container { max-width: 1000px; margin: 0 auto; display: flex; justify-content: space-between; align-items: center; }
+        .logo { display: flex; align-items: center; gap: 10px; font-size: 20px; font-weight: 700; }
+        .logo-icon { width: 32px; height: 32px; background: linear-gradient(135deg, var(--primary), var(--primary-light)); border-radius: 8px; display: flex; align-items: center; justify-content: center; }
+        .logo-icon svg { width: 18px; height: 18px; color: white; }
+        .user-menu { display: flex; align-items: center; gap: 16px; }
+        .user-email { font-size: 14px; color: var(--text-muted); }
+        .btn { display: inline-flex; align-items: center; gap: 8px; padding: 8px 16px; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 14px; border: none; cursor: pointer; transition: all 0.2s; }
+        .btn-outline { background: transparent; color: var(--text-muted); border: 1.5px solid var(--border); }
+        .btn-outline:hover { border-color: var(--text-muted); }
+        .btn-primary { background: var(--primary-dark); color: white; }
+        .btn-primary:hover { background: var(--primary); }
+        .container { max-width: 1000px; margin: 0 auto; padding: 40px 24px; }
+        .welcome { margin-bottom: 32px; }
+        .welcome h1 { font-size: 28px; font-weight: 700; margin-bottom: 8px; }
+        .welcome p { color: var(--text-muted); }
+        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 24px; }
+        .card { background: white; border-radius: 16px; padding: 24px; border: 1px solid var(--border); }
+        .card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        .card-title { font-size: 16px; font-weight: 600; }
+        .card-badge { font-size: 12px; padding: 4px 12px; border-radius: 20px; font-weight: 600; }
+        .badge-free { background: #f1f5f9; color: var(--text-muted); }
+        .badge-starter { background: #dbeafe; color: #2563eb; }
+        .badge-agency { background: #e0e7ff; color: var(--primary-dark); }
+        .badge-enterprise { background: #fef3c7; color: #d97706; }
+        .api-key-box { background: #f8fafc; border: 1px solid var(--border); border-radius: 10px; padding: 16px; display: flex; align-items: center; gap: 12px; }
+        .api-key { font-family: 'JetBrains Mono', monospace; font-size: 14px; color: var(--text); flex: 1; word-break: break-all; }
+        .copy-btn { padding: 8px 12px; background: white; border: 1px solid var(--border); border-radius: 6px; cursor: pointer; font-size: 13px; color: var(--text-muted); transition: all 0.2s; }
+        .copy-btn:hover { border-color: var(--primary); color: var(--primary); }
+        .copy-btn.copied { background: var(--success); border-color: var(--success); color: white; }
+        .usage-bar { height: 8px; background: #e2e8f0; border-radius: 4px; overflow: hidden; margin: 16px 0; }
+        .usage-fill { height: 100%; background: linear-gradient(90deg, var(--primary), var(--primary-light)); border-radius: 4px; transition: width 0.5s; }
+        .usage-stats { display: flex; justify-content: space-between; font-size: 14px; color: var(--text-muted); }
+        .usage-stats strong { color: var(--text); }
+        .upgrade-card { background: linear-gradient(135deg, var(--primary-dark), var(--primary)); border: none; color: white; }
+        .upgrade-card .card-title { color: white; font-size: 18px; }
+        .upgrade-card p { color: rgba(255,255,255,0.8); font-size: 14px; margin-top: 8px; }
+        .upgrade-card .price { font-size: 36px; font-weight: 800; margin: 16px 0 8px; }
+        .upgrade-card .price span { font-size: 16px; font-weight: 400; opacity: 0.8; }
+        .upgrade-card .btn { background: white; color: var(--primary-dark); margin-top: 16px; }
+        .upgrade-card .btn:hover { background: rgba(255,255,255,0.9); }
+        .test-api { margin-top: 20px; }
+        .test-api textarea { width: 100%; height: 100px; padding: 12px; border: 1px solid var(--border); border-radius: 8px; font-family: inherit; font-size: 14px; resize: vertical; }
+        .test-api .btn-group { display: flex; gap: 12px; margin-top: 12px; }
+        .test-result { margin-top: 16px; padding: 16px; background: #f8fafc; border-radius: 8px; font-family: 'JetBrains Mono', monospace; font-size: 13px; white-space: pre-wrap; word-break: break-word; display: none; }
+        .test-result.show { display: block; }
+        .test-result.error { background: #fef2f2; color: var(--error); }
+        .test-result.success { background: #f0fdf4; color: #166534; }
+        .plans-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-top: 16px; }
+        .plan-option { border: 2px solid var(--border); border-radius: 12px; padding: 16px; text-align: center; cursor: pointer; transition: all 0.2s; }
+        .plan-option:hover { border-color: var(--primary-light); }
+        .plan-option.selected { border-color: var(--primary); background: #f5f3ff; }
+        .plan-option h4 { font-size: 16px; margin-bottom: 4px; }
+        .plan-option .price { font-size: 24px; font-weight: 700; color: var(--primary-dark); }
+        .plan-option .price span { font-size: 14px; font-weight: 400; color: var(--text-muted); }
+        .logout { color: var(--error); border-color: var(--error); }
+        .logout:hover { background: #fef2f2; border-color: var(--error); }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="container" style="padding: 0; max-width: none;">
+            <div class="logo"><div class="logo-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg></div>ContentGen API</div>
+            <div class="user-menu">
+                <span class="user-email" id="userEmail">Loading...</span>
+                <a href="/" class="btn btn-outline">Home</a>
+                <button class="btn btn-outline logout" onclick="logout()">Logout</button>
+            </div>
+        </div>
+    </header>
+
+    <div class="container">
+        <div class="welcome">
+            <h1>Dashboard</h1>
+            <p>Manage your API access and usage</p>
+        </div>
+
+        <div class="grid">
+            <!-- API Key Card -->
+            <div class="card">
+                <div class="card-header">
+                    <span class="card-title">Your API Key</span>
+                </div>
+                <div class="api-key-box">
+                    <span class="api-key" id="apiKey">Loading...</span>
+                    <button class="copy-btn" onclick="copyApiKey()">Copy</button>
+                </div>
+                <p style="font-size: 13px; color: var(--text-muted); margin-top: 12px;">Include in header: <code style="background: #f1f5f9; padding: 2px 6px; border-radius: 4px;">Authorization: Bearer YOUR_API_KEY</code></p>
+            </div>
+
+            <!-- Usage Card -->
+            <div class="card">
+                <div class="card-header">
+                    <span class="card-title">Current Plan</span>
+                    <span class="card-badge badge-free" id="planBadge">Free</span>
+                </div>
+                <div class="usage-stats">
+                    <span><strong id="requestsUsed">0</strong> / <span id="requestsTotal">100</span> requests</span>
+                    <span><strong id="wordsUsed">0</strong> / <span id="wordsTotal">50,000</span> words</span>
+                </div>
+                <div class="usage-bar">
+                    <div class="usage-fill" id="usageBar" style="width: 0%"></div>
+                </div>
+                <a href="#upgrade" class="btn btn-primary" style="margin-top: 16px; width: 100%; justify-content: center;" onclick="showUpgrade()">Upgrade Plan</a>
+            </div>
+
+            <!-- Test API Card -->
+            <div class="card" style="grid-column: span 2;">
+                <div class="card-header">
+                    <span class="card-title">Test the API</span>
+                </div>
+                <div class="test-api">
+                    <textarea id="testPrompt" placeholder="Enter your content request...&#10;Example: Write a professional LinkedIn post about AI in business"></textarea>
+                    <div class="btn-group">
+                        <select id="contentType" style="padding: 10px 14px; border: 1px solid var(--border); border-radius: 8px; font-size: 14px;">
+                            <option value="blog">Blog Post</option>
+                            <option value="social">Social Media</option>
+                            <option value="email">Email</option>
+                            <option value="product">Product Description</option>
+                            <option value="landing">Landing Page</option>
+                        </select>
+                        <select id="tone" style="padding: 10px 14px; border: 1px solid var(--border); border-radius: 8px; font-size: 14px;">
+                            <option value="professional">Professional</option>
+                            <option value="casual">Casual</option>
+                            <option value="friendly">Friendly</option>
+                            <option value="authoritative">Authoritative</option>
+                            <option value="humorous">Humorous</option>
+                        </select>
+                        <button class="btn btn-primary" onclick="testApi()">Generate</button>
+                    </div>
+                    <div class="test-result" id="testResult"></div>
+                </div>
+            </div>
+
+            <!-- Upgrade Card -->
+            <div class="card upgrade-card" id="upgradeSection" style="display: none;">
+                <span class="card-title">Upgrade Your Plan</span>
+                <p>Unlock more requests and features</p>
+                <div class="plans-grid">
+                    <div class="plan-option" onclick="selectPlan('starter', 49)">
+                        <h4>Starter</h4>
+                        <div class="price">$49<span>/mo</span></div>
+                    </div>
+                    <div class="plan-option selected" onclick="selectPlan('agency', 199)">
+                        <h4>Agency</h4>
+                        <div class="price">$199<span>/mo</span></div>
+                    </div>
+                    <div class="plan-option" onclick="selectPlan('enterprise', 499)">
+                        <h4>Enterprise</h4>
+                        <div class="price">$499<span>/mo</span></div>
+                    </div>
+                </div>
+                <button class="btn" onclick="upgradePlan()" id="upgradeBtn">Upgrade to Agency - $199/mo</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentPlan = 'free';
+        let selectedPlan = 'agency';
+        
+        const PLAN_QUOTAS = {
+            free: { requests: 100, words: 50000 },
+            starter: { requests: 500, words: 200000 },
+            agency: { requests: 2000, words: 1000000 },
+            enterprise: { requests: -1, words: -1 }
+        };
+
+        async function loadDashboard() {
+            const token = localStorage.getItem('api_token');
+            if (!token) {
+                window.location.href = '/login';
+                return;
+            }
+
+            try {
+                // Fetch user data
+                const res = await fetch('/v1/auth/me', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                
+                if (!res.ok) throw new Error('Session expired');
+                
+                const user = await res.json();
+                
+                document.getElementById('userEmail').textContent = user.email;
+                document.getElementById('apiKey').textContent = user.api_key;
+                document.getElementById('userEmail').textContent = user.email;
+                
+                currentPlan = user.plan || 'free';
+                updateUsage(user);
+                
+            } catch (err) {
+                localStorage.removeItem('api_token');
+                localStorage.removeItem('user_email');
+                window.location.href = '/login';
+            }
+        }
+
+        function updateUsage(user) {
+            const quota = PLAN_QUOTAS[currentPlan] || PLAN_QUOTAS.free;
+            const planBadge = document.getElementById('planBadge');
+            
+            planBadge.textContent = currentPlan.charAt(0).toUpperCase() + currentPlan.slice(1);
+            planBadge.className = `card-badge badge-${currentPlan}`;
+            
+            document.getElementById('requestsUsed').textContent = user.requests_this_month || 0;
+            document.getElementById('wordsUsed').textContent = (user.words_this_month || 0).toLocaleString();
+            
+            if (quota.requests === -1) {
+                document.getElementById('requestsTotal').textContent = '∞';
+                document.getElementById('wordsTotal').textContent = '∞';
+                document.getElementById('usageBar').style.width = '0%';
+            } else {
+                document.getElementById('requestsTotal').textContent = quota.requests;
+                document.getElementById('wordsTotal').textContent = quota.words.toLocaleString();
+                const pct = Math.min((user.requests_this_month / quota.requests) * 100, 100);
+                document.getElementById('usageBar').style.width = `${pct}%`;
+            }
+        }
+
+        function copyApiKey() {
+            const key = document.getElementById('apiKey').textContent;
+            navigator.clipboard.writeText(key);
+            const btn = document.querySelector('.copy-btn');
+            btn.textContent = 'Copied!';
+            btn.classList.add('copied');
+            setTimeout(() => {
+                btn.textContent = 'Copy';
+                btn.classList.remove('copied');
+            }, 2000);
+        }
+
+        function logout() {
+            localStorage.removeItem('api_token');
+            localStorage.removeItem('user_email');
+            window.location.href = '/';
+        }
+
+        function showUpgrade() {
+            document.getElementById('upgradeSection').style.display = 'block';
+            document.getElementById('upgradeSection').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        function selectPlan(plan, price) {
+            selectedPlan = plan;
+            document.querySelectorAll('.plan-option').forEach(el => el.classList.remove('selected'));
+            event.currentTarget.classList.add('selected');
+            document.getElementById('upgradeBtn').textContent = `Upgrade to ${plan.charAt(0).toUpperCase() + plan.slice(1)} - $${price}/mo`;
+        }
+
+        async function upgradePlan() {
+            const token = localStorage.getItem('api_token');
+            const btn = document.getElementById('upgradeBtn');
+            btn.textContent = 'Processing...';
+            btn.disabled = true;
+
+            try {
+                const res = await fetch(`/v1/create-paypal-order?plan=${selectedPlan}`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                
+                const data = await res.json();
+                
+                if (data.approve_url) {
+                    window.location.href = data.approve_url;
+                } else {
+                    throw new Error('Could not create order');
+                }
+            } catch (err) {
+                btn.textContent = 'Error - Try again';
+                btn.disabled = false;
+                alert(err.message);
+            }
+        }
+
+        async function testApi() {
+            const token = localStorage.getItem('api_token');
+            const prompt = document.getElementById('testPrompt').value;
+            const contentType = document.getElementById('contentType').value;
+            const tone = document.getElementById('tone').value;
+            const resultEl = document.getElementById('testResult');
+            
+            if (!prompt.trim()) {
+                alert('Please enter a prompt');
+                return;
+            }
+            
+            resultEl.className = 'test-result show';
+            resultEl.textContent = 'Generating...';
+            
+            try {
+                const res = await fetch('/v1/generate', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        content_type: contentType,
+                        topic: prompt,
+                        tone: tone
+                    })
+                });
+                
+                const data = await res.json();
+                
+                if (!res.ok) throw new Error(data.detail || 'Generation failed');
+                
+                resultEl.className = 'test-result show success';
+                resultEl.textContent = data.content;
+                
+                // Refresh usage
+                loadDashboard();
+                
+            } catch (err) {
+                resultEl.className = 'test-result show error';
+                resultEl.textContent = 'Error: ' + err.message;
+            }
+        }
+
+        // Check for success/cancel from PayPal
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.get('success') === 'true') {
+            alert('Payment successful! Your plan has been upgraded.');
+            window.history.replaceState({}, document.title, '/dashboard');
+        } else if (urlParams.get('canceled') === 'true') {
+            alert('Payment was canceled.');
+            window.history.replaceState({}, document.title, '/dashboard');
+        }
+
+        loadDashboard();
+    </script>
+</body>
+</html>

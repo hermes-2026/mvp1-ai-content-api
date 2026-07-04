@@ -1,6 +1,7 @@
 from fastapi import FastAPI, HTTPException, Header, Depends, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, FileResponse
+from fastapi.staticfiles import StaticFiles
 from app.config import settings
 from app.models import (
     GenerateRequest, 
@@ -10,7 +11,62 @@ from app.models import (
 )
 from app.services.openai_service import generate_content, count_tokens
 from typing import Optional
+from pydantic import BaseModel
 import requests
+import uuid
+import hashlib
+from datetime import datetime, timedelta
+
+
+# ============================================================================
+# AUTH HELPERS
+# ============================================================================
+
+def hash_password(password: str) -> str:
+    return hashlib.sha256(password.encode()).hexdigest()
+
+def generate_api_key() -> str:
+    return f"cg_{uuid.uuid4().hex}"
+
+def create_access_token(user_email: str) -> str:
+    """Simple token generation - in production use JWT"""
+    return f"token_{user_email}_{uuid.uuid4().hex}"
+
+def verify_token(token: str, db: dict) -> Optional[dict]:
+    """Verify token and return user - in production use JWT verification"""
+    if not token.startswith("token_"):
+        return None
+    # Simple lookup
+    for email, user in db.items():
+        expected = f"token_{email}_"
+        if token.startswith(expected):
+            return user
+    return None
+
+def get_current_user(authorization: str = Header(None)) -> dict:
+    if not authorization or not authorization.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    
+    token = authorization.replace("Bearer ", "")
+    user = verify_token(token, users_db)
+    
+    if not user:
+        raise HTTPException(status_code=401, detail="Invalid token")
+    
+    # Reset monthly usage on new month
+    now = datetime.now()
+    if user.get("last_reset"):
+        last_reset = user["last_reset"]
+        if now.month != last_reset.month or now.year != last_reset.year:
+            user["requests_this_month"] = 0
+            user["words_this_month"] = 0
+            user["last_reset"] = now
+    else:
+        user["last_reset"] = now
+    
+    return user
+
+
 
 
 LANDING_PAGE = """
@@ -161,6 +217,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Serve static files
+app.mount("/static", StaticFiles(directory="static"), name="static")
+
 
 # ============================================================================
 # MOCK DATABASE (Replace with Supabase/PostgreSQL in production)
@@ -213,7 +272,114 @@ def get_current_user(authorization: Optional[str] = Header(None)) -> dict:
 @app.get("/", response_class=HTMLResponse)
 async def root():
     """Landing page"""
-    return LANDING_PAGE
+    with open("static/index.html", "r") as f:
+        return f.read()
+
+
+@app.get("/signup", response_class=HTMLResponse)
+async def signup_page():
+    """Signup page"""
+    with open("static/signup.html", "r") as f:
+        return f.read()
+
+
+@app.get("/login", response_class=HTMLResponse)
+async def login_page():
+    """Login page"""
+    with open("static/login.html", "r") as f:
+        return f.read()
+
+
+@app.get("/dashboard", response_class=HTMLResponse)
+async def dashboard_page():
+    """Dashboard page - requires auth"""
+    with open("static/dashboard.html", "r") as f:
+        return f.read()
+
+
+# ============================================================================
+# AUTH API ROUTES
+# ============================================================================
+
+class AuthSignupRequest(BaseModel):
+    email: str
+    password: str
+
+class AuthLoginRequest(BaseModel):
+    email: str
+    password: str
+
+
+@app.post("/v1/auth/signup")
+async def signup(request: AuthSignupRequest):
+    """Create a new account"""
+    email = request.email.lower().strip()
+    
+    # Check if user exists
+    if email in users_db:
+        raise HTTPException(status_code=400, detail="Email already registered")
+    
+    # Create user
+    api_key = generate_api_key()
+    users_db[email] = {
+        "id": api_key,
+        "email": email,
+        "password_hash": hash_password(request.password),
+        "api_key": api_key,
+        "plan": "free",
+        "requests_this_month": 0,
+        "words_this_month": 0,
+        "created_at": datetime.now(),
+        "last_reset": datetime.now()
+    }
+    
+    # Create token
+    token = create_access_token(email)
+    
+    return {
+        "access_token": token,
+        "token_type": "bearer",
+        "email": email,
+        "api_key": api_key
+    }
+
+
+@app.post("/v1/auth/login")
+async def login(request: AuthLoginRequest):
+    """Login to existing account"""
+    email = request.email.lower().strip()
+    
+    # Check if user exists
+    if email not in users_db:
+        raise HTTPException(status_code=401, detail="Invalid email or password")
+    
+    user = users_db[email]
+    
+    # Verify password
+    if user["password_hash"] != hash_password(request.password):
+        raise HTTPException(status_code=401, detail="Invalid email or password")
+    
+    # Create token
+    token = create_access_token(email)
+    
+    return {
+        "access_token": token,
+        "token_type": "bearer",
+        "email": email,
+        "api_key": user["api_key"]
+    }
+
+
+@app.get("/v1/auth/me")
+async def get_me(user: dict = Depends(get_current_user)):
+    """Get current user info"""
+    return {
+        "email": user.get("email"),
+        "api_key": user.get("api_key"),
+        "plan": user.get("plan", "free"),
+        "requests_this_month": user.get("requests_this_month", 0),
+        "words_this_month": user.get("words_this_month", 0),
+    }
 
 
 @app.get("/health")
