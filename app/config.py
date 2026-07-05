@@ -9,6 +9,10 @@ class Settings(BaseSettings):
     # OpenAI
     openai_api_key: str = ""
     
+    # Supabase
+    supabase_url: str = ""
+    supabase_key: str = ""
+    
     # PayPal
     paypal_client_id: str = ""
     paypal_client_secret: str = ""

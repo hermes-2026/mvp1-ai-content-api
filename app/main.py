@@ -10,12 +10,16 @@ from app.models import (
     ContentType
 )
 from app.services.openai_service import generate_content, count_tokens
+from app.db import init_db, get_user_by_email, get_user_by_api_key, create_user, update_user
 from typing import Optional
 from pydantic import BaseModel
 import requests
 import uuid
 import hashlib
 from datetime import datetime, timedelta
+
+# Initialize database
+init_db()
 
 
 # ============================================================================
@@ -48,8 +52,23 @@ def get_current_user(authorization: str = Header(None)) -> dict:
         raise HTTPException(status_code=401, detail="Not authenticated")
     
     token = authorization.replace("Bearer ", "")
-    user = verify_token(token, users_db)
     
+    # Extract API key from token (format: token_email_uuid)
+    if not token.startswith("token_"):
+        raise HTTPException(status_code=401, detail="Invalid token")
+    
+    # Get API key from token (it's after the second underscore)
+    parts = token.split("_")
+    if len(parts) < 3:
+        raise HTTPException(status_code=401, detail="Invalid token format")
+    
+    # The API key is in the original token - we need to find user by checking all
+    # For now, let's just try to validate via the email in the token
+    # Actually, simpler: extract the email from token and get user from DB
+    # Token format: token_{email}_{uuid}
+    email_part = "_".join(parts[1:-1]) if len(parts) > 2 else parts[1]
+    
+    user = get_user_by_email(email_part)
     if not user:
         raise HTTPException(status_code=401, detail="Invalid token")
     
@@ -57,12 +76,18 @@ def get_current_user(authorization: str = Header(None)) -> dict:
     now = datetime.now()
     if user.get("last_reset"):
         last_reset = user["last_reset"]
+        if isinstance(last_reset, str):
+            last_reset = datetime.fromisoformat(last_reset.replace("Z", "+00:00"))
         if now.month != last_reset.month or now.year != last_reset.year:
+            # Update in DB
+            update_user(user["api_key"], {
+                "requests_this_month": 0,
+                "words_this_month": 0,
+                "last_reset": now.isoformat()
+            })
             user["requests_this_month"] = 0
             user["words_this_month"] = 0
             user["last_reset"] = now
-    else:
-        user["last_reset"] = now
     
     return user
 
@@ -292,22 +317,13 @@ async def signup(request: AuthSignupRequest):
     email = request.email.lower().strip()
     
     # Check if user exists
-    if email in users_db:
+    existing = get_user_by_email(email)
+    if existing:
         raise HTTPException(status_code=400, detail="Email already registered")
     
     # Create user
     api_key = generate_api_key()
-    users_db[email] = {
-        "id": api_key,
-        "email": email,
-        "password_hash": hash_password(request.password),
-        "api_key": api_key,
-        "plan": "free",
-        "requests_this_month": 0,
-        "words_this_month": 0,
-        "created_at": datetime.now(),
-        "last_reset": datetime.now()
-    }
+    user = create_user(email, hash_password(request.password), api_key)
     
     # Create token
     token = create_access_token(email)
@@ -326,10 +342,9 @@ async def login(request: AuthLoginRequest):
     email = request.email.lower().strip()
     
     # Check if user exists
-    if email not in users_db:
+    user = get_user_by_email(email)
+    if not user:
         raise HTTPException(status_code=401, detail="Invalid email or password")
-    
-    user = users_db[email]
     
     # Verify password
     if user["password_hash"] != hash_password(request.password):
@@ -396,6 +411,12 @@ async def generate(
         # Update usage
         user["requests_this_month"] += 1
         user["words_this_month"] += word_count
+        
+        # Save to database
+        update_user(user["api_key"], {
+            "requests_this_month": user["requests_this_month"],
+            "words_this_month": user["words_this_month"]
+        })
 
         return GenerateResponse(
             content=content,
