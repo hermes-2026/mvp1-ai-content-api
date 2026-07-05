@@ -329,8 +329,11 @@
             } catch (err) {
                 resultEl.className = 'test-result show error';
                 let msg = err.message;
-                if (msg === '[object Object]') msg = 'Server error. Check API keys.';
-                resultEl.textContent = 'Error: ' + msg;
+                if (msg === '[object Object]' || !msg) {
+                    // Try to get error from response
+                    msg = 'Server error. Please check Railway logs or OpenAI key.';
+                }
+                resultEl.textContent = msg;
             }
         }
 
