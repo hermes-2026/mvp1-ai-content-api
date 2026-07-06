@@ -547,7 +547,7 @@ async def get_plans():
     """Get available plans and prices"""
     return {
         "plans": [
-            {"name": "free", "price": 0, "requests": 100, "words": 50000},
+            {"name": "free", "price": 0, "requests": 5, "words": 1000},
             {"name": "starter", "price": 49, "requests": 500, "words": 200000},
             {"name": "agency", "price": 199, "requests": 2000, "words": 1000000},
             {"name": "enterprise", "price": 499, "requests": "unlimited", "words": "unlimited"},
