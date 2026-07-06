@@ -57,16 +57,14 @@ def get_current_user(authorization: str = Header(None)) -> dict:
     if not token.startswith("token_"):
         raise HTTPException(status_code=401, detail="Invalid token")
     
-    # Get API key from token (it's after the second underscore)
-    parts = token.split("_")
-    if len(parts) < 3:
+    # Token format: token_{email}_{uuid}
+    # Find the last underscore to extract email (email may contain @)
+    after_token = token[6:]  # Remove "token_"
+    last_underscore = after_token.rfind("_")
+    if last_underscore <= 0:
         raise HTTPException(status_code=401, detail="Invalid token format")
     
-    # The API key is in the original token - we need to find user by checking all
-    # For now, let's just try to validate via the email in the token
-    # Actually, simpler: extract the email from token and get user from DB
-    # Token format: token_{email}_{uuid}
-    email_part = "_".join(parts[1:-1]) if len(parts) > 2 else parts[1]
+    email_part = after_token[:last_underscore]
     
     user = get_user_by_email(email_part)
     if not user:
