@@ -14,24 +14,13 @@ def init_db():
     if settings.supabase_url and settings.supabase_key:
         try:
             supabase = create_client(settings.supabase_url, settings.supabase_key)
-            # Test connection - create users table if not exists
+            # Test connection
             try:
                 supabase.table("users").select("*").limit(1).execute()
+                logger.info("Supabase connection initialized successfully")
             except Exception as e:
-                logger.info(f"Creating users table: {e}")
-                # Table doesn't exist, create it
-                supabase.table("users").create({
-                    "id": "text primary key",
-                    "email": "text unique not null",
-                    "password_hash": "text not null",
-                    "api_key": "text unique not null",
-                    "plan": "text default 'free'",
-                    "requests_this_month": "int default 0",
-                    "words_this_month": "int default 0",
-                    "created_at": "timestamp with time zone default now()",
-                    "last_reset": "timestamp with time zone default now()"
-                }).execute()
-            logger.info("Supabase connection initialized successfully")
+                # Table might not exist - that's OK, we'll handle it in create_user
+                logger.warning(f"Users table check failed (may not exist yet): {e}")
         except Exception as e:
             logger.error(f"Failed to connect to Supabase: {e}")
             supabase = None
