@@ -323,6 +323,9 @@ async def signup(request: AuthSignupRequest):
     api_key = generate_api_key()
     user = create_user(email, hash_password(request.password), api_key)
     
+    if not user:
+        raise HTTPException(status_code=500, detail="Failed to create user. Database connection error.")
+    
     # Create token
     token = create_access_token(email)
     

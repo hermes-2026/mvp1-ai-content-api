@@ -1,6 +1,9 @@
 from supabase import create_client, Client
 from app.config import settings
 from typing import Optional
+import logging
+
+logger = logging.getLogger(__name__)
 
 # Initialize Supabase client
 supabase: Optional[Client] = None
@@ -9,23 +12,31 @@ def init_db():
     """Initialize Supabase connection"""
     global supabase
     if settings.supabase_url and settings.supabase_key:
-        supabase = create_client(settings.supabase_url, settings.supabase_key)
-        # Create users table if not exists
         try:
-            supabase.table("users").select("*").limit(1).execute()
-        except:
-            # Table doesn't exist, create it
-            supabase.table("users").create({
-                "id": "text primary key",
-                "email": "text unique not null",
-                "password_hash": "text not null",
-                "api_key": "text unique not null",
-                "plan": "text default 'free'",
-                "requests_this_month": "int default 0",
-                "words_this_month": "int default 0",
-                "created_at": "timestamp with time zone default now()",
-                "last_reset": "timestamp with time zone default now()"
-            }).execute()
+            supabase = create_client(settings.supabase_url, settings.supabase_key)
+            # Test connection - create users table if not exists
+            try:
+                supabase.table("users").select("*").limit(1).execute()
+            except Exception as e:
+                logger.info(f"Creating users table: {e}")
+                # Table doesn't exist, create it
+                supabase.table("users").create({
+                    "id": "text primary key",
+                    "email": "text unique not null",
+                    "password_hash": "text not null",
+                    "api_key": "text unique not null",
+                    "plan": "text default 'free'",
+                    "requests_this_month": "int default 0",
+                    "words_this_month": "int default 0",
+                    "created_at": "timestamp with time zone default now()",
+                    "last_reset": "timestamp with time zone default now()"
+                }).execute()
+            logger.info("Supabase connection initialized successfully")
+        except Exception as e:
+            logger.error(f"Failed to connect to Supabase: {e}")
+            supabase = None
+    else:
+        logger.warning("Supabase credentials not configured")
     return supabase
 
 def get_user_by_email(email: str) -> Optional[dict]:
