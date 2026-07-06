@@ -21,6 +21,12 @@ from datetime import datetime, timedelta
 # Initialize database
 init_db()
 
+# Log startup info
+import logging
+logger = logging.getLogger(__name__)
+logger.info(f"Supabase URL configured: {bool(settings.supabase_url)}")
+logger.info(f"Supabase KEY configured: {bool(settings.supabase_key)}")
+
 
 # ============================================================================
 # AUTH HELPERS

@@ -53,21 +53,34 @@ def get_user_by_api_key(api_key: str) -> Optional[dict]:
     result = supabase.table("users").select("*").eq("api_key", api_key).execute()
     return result.data[0] if result.data else None
 
-def create_user(email: str, password_hash: str, api_key: str) -> dict:
+def create_user(email: str, password_hash: str, api_key: str) -> Optional[dict]:
     """Create new user"""
     if not supabase:
+        logger.error("Supabase not initialized")
         return None
-    data = {
-        "id": api_key,
-        "email": email,
-        "password_hash": password_hash,
-        "api_key": api_key,
-        "plan": "free",
-        "requests_this_month": 0,
-        "words_this_month": 0
-    }
-    result = supabase.table("users").insert(data).execute()
-    return result.data[0]
+    
+    try:
+        data = {
+            "id": api_key,
+            "email": email,
+            "password_hash": password_hash,
+            "api_key": api_key,
+            "plan": "free",
+            "requests_this_month": 0,
+            "words_this_month": 0
+        }
+        result = supabase.table("users").insert(data).execute()
+        
+        if result.data and len(result.data) > 0:
+            logger.info(f"User created successfully: {email}")
+            return result.data[0]
+        else:
+            logger.error(f"Insert succeeded but no data returned for: {email}")
+            return None
+            
+    except Exception as e:
+        logger.error(f"Failed to create user {email}: {e}")
+        return None
 
 def update_user(api_key: str, updates: dict) -> dict:
     """Update user"""
