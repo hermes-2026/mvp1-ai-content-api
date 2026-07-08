@@ -194,8 +194,8 @@ LANDING_PAGE = """
         <div class="container">
             <h2 class="section-title">Simple, Transparent Pricing</h2>
             <div class="pricing-grid">
-                <div class="plan"><div class="plan-name">Free</div><div class="plan-price">$0<span>/month</span></div><ul class="plan-features"><li><span class="check">✓</span> 5 requests/month</li><li><span class="check">✓</span> 1,000 words/month</li><li><span class="check">✓</span> All content types</li></ul><a href="/docs" class="btn btn-outline">Get Started</a></div>
-                <div class="plan popular"><div class="plan-name">Agency</div><div class="plan-price">$199<span>/month</span></div><ul class="plan-features"><li><span class="check">✓</span> 200 requests/month</li><li><span class="check">✓</span> 50,000 words/month</li><li><span class="check">✓</span> All content types</li><li><span class="check">✓</span> White-label</li></ul><a href="/docs" class="btn btn-primary">Get Started</a></div>
+                <div class="plan"><div class="plan-name">Free</div><div class="plan-price">$0<span>/month</span></div><ul class="plan-features"><li><span class="check">✓</span> 5 requests/month</li><li><span class="check">✓</span> 1,000 words/month</li><li><span class="check">✓</span> Blog & Email only</li></ul><a href="/docs" class="btn btn-outline">Get Started</a></div>
+                <div class="plan popular"><div class="plan-name">Agency</div><div class="plan-price">$199<span>/month</span></div><ul class="plan-features"><li><span class="check">✓</span> 2,000 requests/month</li><li><span class="check">✓</span> 1,000,000 words/month</li><li><span class="check">✓</span> All content types</li><li><span class="check">✓</span> White-label</li></ul><a href="/docs" class="btn btn-primary">Get Started</a></div>
                 <div class="plan"><div class="plan-name">Enterprise</div><div class="plan-price">$499<span>/month</span></div><ul class="plan-features"><li><span class="check">✓</span> Unlimited requests</li><li><span class="check">✓</span> Unlimited words</li><li><span class="check">✓</span> Dedicated support</li></ul><a href="/docs" class="btn btn-outline">Contact Us</a></div>
             </div>
         </div>
@@ -272,6 +272,10 @@ PLAN_PRICES = {
     "agency": 199,
     "enterprise": 499,
 }
+
+# Content types allowed per plan
+FREE_CONTENT_TYPES = ["blog_post", "email"]
+FREE_TONES = ["professional", "casual"]
 
 
 @app.get("/", response_class=HTMLResponse)
@@ -402,6 +406,19 @@ async def generate(
             status_code=429,
             detail="Quota exceeded. Upgrade your plan."
         )
+
+    # Check content type and tone for free tier
+    if plan == "free":
+        if request.content_type.value not in FREE_CONTENT_TYPES:
+            raise HTTPException(
+                status_code=403,
+                detail=f"Free tier only supports blog and email. Upgrade to access {request.content_type.value}."
+            )
+        if request.tone.value not in FREE_TONES:
+            raise HTTPException(
+                status_code=403,
+                detail=f"Free tier only supports professional and casual tones. Upgrade to access {request.tone.value}."
+            )
 
     # Generate content
     try:
